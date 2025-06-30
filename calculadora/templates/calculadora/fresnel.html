@@ -35,13 +35,40 @@
 </head>
 <body>
 
+<div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="infoModalLabel">¿Qué es la Zona de Fresnel?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p>
+          La Zona de Fresnel es un área elíptica alrededor de la línea directa entre dos antenas de radio o microondas. Para que la señal se transmita sin pérdidas significativas, esta zona debe estar libre de obstáculos que puedan bloquear o reflejar la señal.
+        </p>
+        <p>
+          Esta calculadora sirve para calcular el radio de la primera zona de Fresnel en metros, según la distancia y la frecuencia de transmisión, y también evalúa si un obstáculo puede interferir con la señal.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <canvas id="fresnelCanvas"></canvas>
 
 <div class="container">
   <div class="row justify-content-center">
     <div class="col-md-8 contenedor text-center">
       <h1 class="mb-4">Calculadora de Zona de Fresnel</h1>
-      <h6 class="mb-4"><em>Creado por: Rebeca López</em> </h6>
+      <h6 class="mb-2"><em>Creado por: Rebeca López</em></h6>
+
+      <!-- Botón para mostrar el modal -->
+      <button type="button" class="btn btn-info mb-4" data-bs-toggle="modal" data-bs-target="#infoModal">
+        ¿Qué es la Zona de Fresnel?
+      </button>
 
       <form method="post">
         {% csrf_token %}
@@ -92,7 +119,6 @@
   </div>
 </div>
 
-
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -116,7 +142,6 @@
       let drawWidth, drawHeight, offsetX, offsetY;
 
       if (ratioImg > ratioCanvas) {
-        // ajustar imagen del fondo
         drawHeight = canvas.height;
         drawWidth = drawHeight * ratioImg;
         offsetX = -(drawWidth - canvas.width) / 2;
@@ -127,7 +152,7 @@
         offsetX = 0;
         offsetY = canvas.height - drawHeight; 
       }
-      // Grafico
+
       ctx.drawImage(imagenFondo, offsetX, offsetY, drawWidth, drawHeight);
 
       const distancia = parseFloat("{{ distancia|default_if_none:0 }}");
