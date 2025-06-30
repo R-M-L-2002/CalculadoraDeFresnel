@@ -1,0 +1,186 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Calculadora Fresnel</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    html, body {
+      height: auto;
+      min-height: 100vh;
+      overflow-x: hidden;
+      overflow-y: auto;
+      margin: 0;
+    }
+
+    #fresnelCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+    }
+
+    .contenedor {
+      position: relative;
+      z-index: 1;
+      background-color: transparent;
+      color: #000;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="fresnelCanvas"></canvas>
+
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-md-8 contenedor text-center">
+      <h1 class="mb-4">Calculadora de Zona de Fresnel</h1>
+      <h6 class="mb-4"><em>Creado por: Rebeca López</em> </h6>
+
+      <form method="post">
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col">
+            <label class="form-label">Distancia (km):</label>
+            <input type="number" name="distancia" step="any" class="form-control" required>
+          </div>
+          <div class="col">
+            <label class="form-label">Altura del obstáculo (m):</label>
+            <input type="number" name="obstaculo" step="any" class="form-control" required>
+          </div>
+          <div class="col">
+            <label class="form-label">Frecuencia (GHz):</label>
+            <input type="number" name="frecuencia" step="any" class="form-control" required>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary w-100 mt-3">Calcular</button>
+      </form>
+
+      {% if interferencia %}
+        <div class="alert alert-warning mt-4">{{ interferencia }}</div>
+      {% endif %}
+
+      {% if historial %}
+        <div style="height: 220px;"></div> 
+        <h2>Historial</h2>
+        <table class="table table-striped table-bordered table-hover">
+          <thead class="table-dark">
+            <tr>
+              <th>Distancia (km)</th>
+              <th>Frecuencia (GHz)</th>
+              <th>Resultado (m)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for h in historial %}
+            <tr>
+              <td>{{ h.distancia }}</td>
+              <td>{{ h.frecuencia }}</td>
+              <td>{{ h.resultado }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const canvas = document.getElementById("fresnelCanvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const imagenFondo = new Image();
+    imagenFondo.src = "{% static 'calculadora/torres.png' %}";
+
+    imagenFondo.onload = function () {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const ratioImg = imagenFondo.width / imagenFondo.height;
+      const ratioCanvas = canvas.width / canvas.height;
+
+      let drawWidth, drawHeight, offsetX, offsetY;
+
+      if (ratioImg > ratioCanvas) {
+        // ajustar imagen del fondo
+        drawHeight = canvas.height;
+        drawWidth = drawHeight * ratioImg;
+        offsetX = -(drawWidth - canvas.width) / 2;
+        offsetY = 0;
+      } else {
+        drawWidth = canvas.width;
+        drawHeight = drawWidth / ratioImg;
+        offsetX = 0;
+        offsetY = canvas.height - drawHeight; 
+      }
+      // Grafico
+      ctx.drawImage(imagenFondo, offsetX, offsetY, drawWidth, drawHeight);
+
+      const distancia = parseFloat("{{ distancia|default_if_none:0 }}");
+      const frecuencia = parseFloat("{{ frecuencia|default_if_none:0 }}");
+      const obstaculo = parseFloat("{{ obstaculo|default_if_none:0 }}");
+      const fresnel = parseFloat("{{ resultado|default_if_none:0 }}");
+
+      if (distancia && frecuencia && fresnel) {
+        const margen = 50;
+        const x1 = margen;
+        const x2 = canvas.width - margen;
+        const yAntena = canvas.height / 2;
+
+        ctx.beginPath();
+        ctx.moveTo(x1, canvas.height);
+        ctx.lineTo(x1, yAntena);
+        ctx.moveTo(x2, canvas.height);
+        ctx.lineTo(x2, yAntena);
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x1, yAntena);
+        ctx.lineTo(x2, yAntena);
+        ctx.strokeStyle = "#888";
+        ctx.setLineDash([5, 5]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const centroX = (x1 + x2) / 2;
+        const centroY = yAntena;
+        const radioEscalado = fresnel * 3;
+
+        ctx.beginPath();
+        ctx.ellipse(centroX, centroY, (x2 - x1) / 2, radioEscalado, 0, 0, 2 * Math.PI);
+        ctx.strokeStyle = "rgba(0, 100, 255, 0.6)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        if (obstaculo > 0) {
+          const altura = obstaculo * 3;
+          ctx.fillStyle = "rgba(255, 0, 0, 0.6)";
+          ctx.fillRect(centroX - 10, centroY - altura, 20, altura);
+        }
+
+        ctx.fillStyle = "#000";
+        ctx.font = "bold 16px Arial";
+        ctx.fillText(`Fresnel: ${fresnel.toFixed(2)} m`, centroX - 50, centroY + 20);
+      }
+    };
+  });
+</script>
+
+</body>
+</html>
